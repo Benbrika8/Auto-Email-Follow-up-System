@@ -1,0 +1,458 @@
+{
+  "name": "Auto Email Follow-up System",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        -48
+      ],
+      "id": "69d23e3e-68ec-4f03-9ec0-3ae00903cdce",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "includeSpamTrash": false,
+          "labelIds": [
+            "UNREAD",
+            "INBOX"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -752,
+        -48
+      ],
+      "id": "45615b96-cd8a-4848-872c-254b39c7c863",
+      "name": "Get many messages",
+      "webhookId": "8a6af5ae-54f2-4f85-b46b-64f7a18a67ed",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "17ff98a5-1f8d-4b60-a2a8-d780283eec98",
+              "name": "from_email",
+              "value": "={{ $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "241f5ec9-f4a9-41f5-8fdd-a3b4228bf114",
+              "name": "subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "68d4ff71-7bbc-4b48-b871-0e0049911746",
+              "name": "received_date",
+              "value": "={{ $now }}",
+              "type": "string"
+            },
+            {
+              "id": "bd9b4a46-7783-4430-9bc9-83bdd37336d8",
+              "name": "preview",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "5f11b152-a56b-435b-9ca6-ae0526589dc0",
+              "name": "email_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "97a2e910-6e7c-4f6a-ac6f-5e974afc1cdb",
+              "name": "thread_id",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        -48
+      ],
+      "id": "39f1f39c-aa92-4fae-a1a6-e3def2ccbfd3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "/**\n * ADVANCED EMAIL CLASSIFIER - GLOBAL MARKET READY\n * Target: English-speaking clients & automated support\n */\n\n// 1. Clean and Normalize Input Data\nconst subject = ($json.subject || \"\").toString().toLowerCase().trim();\nconst preview = ($json.preview || \"\").toString().toLowerCase().trim();\nconst content = (subject + \" \" + preview);\n\n// 2. Comprehensive Keyword Libraries\nconst keywords = {\n    urgent: [\n        'urgent', 'emergency', 'asap', 'immediately', 'critical', \n        'broken', 'failed', 'down', 'crash', 'security breach', \n        'hacked', 'login issue', 'cannot access', 'fatal error'\n    ],\n    question: [\n        'how to', 'what is', 'can i', 'question', 'inquiring', \n        'help with', 'tutorial', 'documentation', 'clarify', \n        'meaning', 'where can i', 'why does'\n    ],\n    complaint: [\n        'unhappy', 'disappointed', 'terrible', 'cancel', 'refund', \n        'worst', 'not satisfied', 'useless', 'bad experience', \n        'angry', 'complaint', 'frustrated'\n    ],\n    request: [\n        'need', 'want', 'order', 'require', 'looking for', \n        'send me', 'provide', 'setup', 'service', 'feature request'\n    ]\n};\n\n// 3. Logic: Checking for matches\nconst hasMatch = (category) => keywords[category].some(word => content.includes(word));\n\n// 4. Determine Priority & Type\nlet priority = 'normal';\nlet emailType = 'general';\n\n// Priority Logic\nif (hasMatch('urgent') || hasMatch('complaint')) {\n    priority = 'urgent'; // Complaints are treated as urgent to save the client\n}\n\n// Type Classification Logic\nif (hasMatch('complaint')) {\n    emailType = 'complaint';\n} else if (hasMatch('question') || content.includes('?')) {\n    emailType = 'question';\n} else if (hasMatch('request')) {\n    emailType = 'request';\n}\n\n// 5. Return Clean Data Object\nreturn {\n    priority: priority,\n    email_type: emailType,\n    from_email: $json.from_email,\n    subject: $json.subject,\n    email_id: $json.email_id,\n    thread_id: $json.thread_id,\n    processed_at: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -48
+      ],
+      "id": "6b818c9e-6568-4d0a-af62-935849781d6d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "10e91941-3c57-4988-8b59-46f89f3881c2",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "=urgent",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "857f0ac6-4070-4381-812e-e9cb2230a673",
+              "leftValue": "={{ $json.email_type }}",
+              "rightValue": "=complaint",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -48
+      ],
+      "id": "e2791a3c-e6da-408d-80a6-c42aaf6ae8a1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fad98f29-4042-4424-8531-7826d2187de4",
+              "leftValue": "={{ $json.email_type }}",
+              "rightValue": "=question",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        144
+      ],
+      "id": "12a6107b-d801-4dca-9a3f-58436ba8de44",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.email_id }}",
+        "message": "Dear Customer,  Thank you for your message. We've flagged this as URGENT and our team has been notified.  Someone will respond to you within the next 2 hours.  Best regards, Support Team ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        -176
+      ],
+      "id": "e3c94601-d134-424b-9413-46a00b63bf2e",
+      "name": "Reply to a URGENT  message",
+      "webhookId": "ed586a30-080a-47e8-9155-9112419b4b1b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.email_id }}",
+        "emailType": "text",
+        "message": "\"Thanks for your question! check our FAQ page here: www.example.com/help. We will answer you in detail within 24 hours.\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        0
+      ],
+      "id": "650186af-15f5-4de9-ba62-6dd713515450",
+      "name": "Reply to a question message",
+      "webhookId": "23dd1b72-b5b4-4022-87ec-bcddba312350",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.email_id }}",
+        "emailType": "text",
+        "message": "Thank you for your request!  We're reviewing your requirements and will get back to you within 24-48 hours with next steps.  Best regards, Support Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        208
+      ],
+      "id": "9d3a0697-e218-4459-906e-b55f81d31083",
+      "name": "Reply to a request message",
+      "webhookId": "0383deb3-90a4-4f1d-96d4-a2d5da529747",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Code in JavaScript').item.json.email_id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        -176
+      ],
+      "id": "50c1aa11-cef7-438e-b1a4-edacc6ebe6c7",
+      "name": "Mark a urgent message as read",
+      "webhookId": "24e3569d-8356-4310-a605-074b7120684b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Code in JavaScript').item.json.email_id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        0
+      ],
+      "id": "6b5fde7b-70aa-4efd-a7ed-4f78d3271ab5",
+      "name": "Mark a question message as read1",
+      "webhookId": "24e3569d-8356-4310-a605-074b7120684b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Code in JavaScript').item.json.email_id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        208
+      ],
+      "id": "fb8a8a3c-a0d5-4856-ac18-29043a8e3dbc",
+      "name": "Mark a request message as read",
+      "webhookId": "24e3569d-8356-4310-a605-074b7120684b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "seI0s3PUJIChmE64",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Reply to a URGENT  message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Reply to a question message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply to a request message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a URGENT  message": {
+      "main": [
+        [
+          {
+            "node": "Mark a urgent message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a question message": {
+      "main": [
+        [
+          {
+            "node": "Mark a question message as read1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a request message": {
+      "main": [
+        [
+          {
+            "node": "Mark a request message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2f7f988a-f066-4188-b0cb-77fb55a97896",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2286a3a7b7442a1d6f5422639cf5aca3080cf9117a4f394ec938fe8a5f15ccfe"
+  },
+  "id": "f5xuJSf7CyaVSa4d",
+  "tags": []
+}
