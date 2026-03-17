@@ -6,6 +6,11 @@ Professional N8N workflow for intelligent email classification and automated res
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/badge/GitHub-Benbrika8-181717?logo=github)](https://github.com/Benbrika8)
 
+## 🖼️ Workflow Preview
+
+![Workflow Preview](workflow-preview.svg)
+
+
 ## 📋 Overview
 
 This workflow automates email inbox management by continuously monitoring Gmail, classifying incoming messages using AI-powered keyword analysis, and sending contextual automated responses based on email type and priority. The system categorizes emails into urgent, question, complaint, or request types, then routes them to appropriate response templates and marks them as processed.
